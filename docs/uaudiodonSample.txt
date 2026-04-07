@@ -1,0 +1,45 @@
+const fs = require('fs');
+const portAudio = require('naudiodon');
+const { WaveFile } = require('wavefile');
+
+function playWavBuffer(filePath) {
+    const wavBuffer = fs.readFileSync(filePath);
+    const wav = new WaveFile(wavBuffer);
+
+    wav.toBitDepth("16");
+
+    const pcmData = Buffer.from(wav.data.samples);
+    const sampleRate = wav.fmt.sampleRate;
+    const channels = wav.fmt.numChannels;
+    const durationMs = (pcmData.length / (channels * 2) / sampleRate) * 1000;
+
+    const ao = new portAudio.AudioIO({
+        outOptions: {
+            channelCount: channels,
+            sampleFormat: portAudio.SampleFormat16Bit,
+            sampleRate: sampleRate,
+            deviceId: 11, // pipewire
+            closeOnError: true
+        }
+    });
+
+    ao.on('error', (err) => console.error('AudioIO error:', err));
+
+    ao.start();
+
+    ao.write(pcmData, (err) => {
+        if (err) console.error('Error writing audio:', err);
+    });
+    ao.write(pcmData, (err) => {
+        if (err) console.error('Error writing audio:', err);
+    });
+
+    // Exit after audio finishes playing (duration + small buffer)
+	console.log(`duration in ms = ${durationMs}`);
+    setTimeout(() => {
+        console.log('Audio playback finished.');
+        process.exit(0);
+    }, durationMs + 500);
+}
+
+playWavBuffer('/home/brett/Downloads/m4.wav');
