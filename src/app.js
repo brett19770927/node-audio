@@ -1,4 +1,5 @@
 const express = require('express');
+const { getAudioDeviceId, getPort, getSoundsPath } = require("./config");
 const { loadSoundIcons } = require("./loadSoundIcons");
 const { play } = require("./playSound");
 const { setupRoutes } = require("./routeSetup");
@@ -11,9 +12,9 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use(require('morgan')('tiny'));
 
-const PORT = parseInt(process.env.AUDIO_PORT) || 9876;
-const DEVICE_ID = parseInt(process.env.AUDIO_DEVICE_ID) || 11;
-const SOUNDS_PATH = process.env.AUDIO_SOUNDS_PATH || "/home/brett/projects/node-audio/sound-icons";
+const PORT = getPort();
+const DEVICE_ID = getAudioDeviceId();
+const SOUNDS_PATH = getSoundsPath();
 
 loadSoundIcons(SOUNDS_PATH).then(soundIconMap => {
     app.use('', setupRoutes(express.Router(), soundIconMap, play, DEVICE_ID));

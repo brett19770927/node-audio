@@ -1,14 +1,18 @@
 const DEFAULT_SOUNDS_PATH = '/home/brett/projects/node-audio/sound-icons';
+const DEFAULT_DEVICE_ID = 99;
+const DEFAULT_PORT = 9876;
 
 beforeEach(() => {
     jest.resetModules();
-    delete process.env.AUDIO_PORT;
-    delete process.env.AUDIO_DEVICE_ID;
-    delete process.env.AUDIO_SOUNDS_PATH;
 });
 
-async function loadApp(env = {}) {
-    Object.assign(process.env, env);
+async function loadApp(configOverrides = {}) {
+    const mockConfig = {
+        getAudioDeviceId: jest.fn(() => DEFAULT_DEVICE_ID),
+        getPort: jest.fn(() => DEFAULT_PORT),
+        getSoundsPath: jest.fn(() => DEFAULT_SOUNDS_PATH),
+        ...configOverrides,
+    };
 
     const mockSoundIconMap = new Map([['click', { pcmData: Buffer.alloc(4), sampleRate: 48000, channels: 2 }]]);
     const mockLoadSoundIcons = jest.fn().mockResolvedValue(mockSoundIconMap);
@@ -17,6 +21,7 @@ async function loadApp(env = {}) {
     const mockListen = jest.fn();
     const mockUse = jest.fn();
 
+    jest.doMock('./config', () => mockConfig);
     jest.doMock('./loadSoundIcons', () => ({ loadSoundIcons: mockLoadSoundIcons }));
     jest.doMock('./playSound', () => ({ play: mockPlay }));
     jest.doMock('./routeSetup', () => ({ setupRoutes: mockSetupRoutes }));
@@ -33,17 +38,18 @@ async function loadApp(env = {}) {
     require('./app');
     await new Promise(resolve => setImmediate(resolve));
 
-    return { mockLoadSoundIcons, mockPlay, mockSetupRoutes, mockListen, mockUse, mockSoundIconMap };
+    return { mockConfig, mockLoadSoundIcons, mockPlay, mockSetupRoutes, mockListen, mockUse, mockSoundIconMap };
 }
 
-test('calls loadSoundIcons with default sounds path', async () => {
+test('calls loadSoundIcons with sounds path from config', async () => {
     const { mockLoadSoundIcons } = await loadApp();
     expect(mockLoadSoundIcons).toHaveBeenCalledWith(DEFAULT_SOUNDS_PATH);
 });
 
-test('calls loadSoundIcons with AUDIO_SOUNDS_PATH env var', async () => {
-    const { mockLoadSoundIcons } = await loadApp({ AUDIO_SOUNDS_PATH: '/custom/sounds' });
-    expect(mockLoadSoundIcons).toHaveBeenCalledWith('/custom/sounds');
+test('calls loadSoundIcons with custom sounds path', async () => {
+    const customPath = '/custom/sounds';
+    const { mockLoadSoundIcons } = await loadApp({ getSoundsPath: jest.fn(() => customPath) });
+    expect(mockLoadSoundIcons).toHaveBeenCalledWith(customPath);
 });
 
 test('calls setupRoutes with resolved soundIconMap and play', async () => {
@@ -51,23 +57,23 @@ test('calls setupRoutes with resolved soundIconMap and play', async () => {
     expect(mockSetupRoutes).toHaveBeenCalledWith(expect.anything(), mockSoundIconMap, mockPlay, expect.anything());
 });
 
-test('calls setupRoutes with default device ID', async () => {
+test('calls setupRoutes with device ID from config', async () => {
     const { mockSetupRoutes } = await loadApp();
-    expect(mockSetupRoutes).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 11);
+    expect(mockSetupRoutes).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), DEFAULT_DEVICE_ID);
 });
 
-test('calls setupRoutes with AUDIO_DEVICE_ID env var', async () => {
-    const { mockSetupRoutes } = await loadApp({ AUDIO_DEVICE_ID: '5' });
+test('calls setupRoutes with custom device ID', async () => {
+    const { mockSetupRoutes } = await loadApp({ getAudioDeviceId: jest.fn(() => 5) });
     expect(mockSetupRoutes).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.anything(), 5);
 });
 
-test('listens on default port', async () => {
+test('listens on port from config', async () => {
     const { mockListen } = await loadApp();
-    expect(mockListen.mock.calls[0][0]).toBe(9876);
+    expect(mockListen.mock.calls[0][0]).toBe(DEFAULT_PORT);
 });
 
-test('listens on AUDIO_PORT env var', async () => {
-    const { mockListen } = await loadApp({ AUDIO_PORT: '3000' });
+test('listens on custom port', async () => {
+    const { mockListen } = await loadApp({ getPort: jest.fn(() => 3000) });
     expect(mockListen.mock.calls[0][0]).toBe(3000);
 });
 
@@ -77,6 +83,11 @@ test('exits with error if loadSoundIcons fails', async () => {
 
     jest.resetModules();
     const mockError = new Error('bad path');
+    jest.doMock('./config', () => ({
+        getAudioDeviceId: jest.fn(() => DEFAULT_DEVICE_ID),
+        getPort: jest.fn(() => DEFAULT_PORT),
+        getSoundsPath: jest.fn(() => DEFAULT_SOUNDS_PATH),
+    }));
     jest.doMock('./loadSoundIcons', () => ({ loadSoundIcons: jest.fn().mockRejectedValue(mockError) }));
     jest.doMock('./playSound', () => ({ play: jest.fn() }));
     jest.doMock('./routeSetup', () => ({ setupRoutes: jest.fn() }));
