@@ -10,4 +10,7 @@ module.exports = {
 	getSoundsPath: function () {
     return process.env.AUDIO_SOUNDS_PATH || "/home/brett/projects/node-audio/sound-icons";
   },
+	getMaxBufferSize: function () {
+    return parseInt(process.env.AUDIO_MAX_BUFFER_SIZE) || 200 * 1024;
+  },
 }

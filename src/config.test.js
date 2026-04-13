@@ -10,6 +10,7 @@ beforeEach(() => {
     delete process.env.AUDIO_DEVICE_ID;
     delete process.env.AUDIO_PORT;
     delete process.env.AUDIO_SOUNDS_PATH;
+    delete process.env.AUDIO_MAX_BUFFER_SIZE;
 });
 
 describe('getAudioDeviceId', () => {
@@ -35,6 +36,19 @@ describe('getPort', () => {
     test('defaults to 9876', () => {
         const { getPort } = require('./config');
         expect(getPort()).toBe(9876);
+    });
+});
+
+describe('getMaxBufferSize', () => {
+    test('returns AUDIO_MAX_BUFFER_SIZE env var as integer', () => {
+        process.env.AUDIO_MAX_BUFFER_SIZE = '8192';
+        const { getMaxBufferSize } = require('./config');
+        expect(getMaxBufferSize()).toBe(8192);
+    });
+
+    test('defaults to 204800 (200KB)', () => {
+        const { getMaxBufferSize } = require('./config');
+        expect(getMaxBufferSize()).toBe(200 * 1024);
     });
 });
 

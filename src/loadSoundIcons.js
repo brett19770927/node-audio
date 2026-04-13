@@ -1,5 +1,6 @@
 const fs = require('fs');
 const { WaveFile } = require('wavefile');
+const { getMaxBufferSize } = require('./config');
 
 async function loadSoundIcons(pathToSoundIcons)  {
   return new Map((await getWavFiles(pathToSoundIcons))
@@ -7,7 +8,8 @@ async function loadSoundIcons(pathToSoundIcons)  {
 			  getSoundIconName(it),
 			  getSoundData(it)
       ]
-		));
+		)
+    .filter( ([, data]) => data != null));
 }
 
 function getSoundIconName(filename)  {
@@ -15,14 +17,27 @@ function getSoundIconName(filename)  {
 }
 
 function getSoundData(filename)  {
-    return mapWavData(new WaveFile(fs.readFileSync(filename)));
+    try {
+        return mapWavData(new WaveFile(fs.readFileSync(filename)));
+    } catch(e) {
+        console.log(e);
+        return null;
+    }
 }
+
+const MAX_BUFFER_SIZE = 200 * 1024;
 
 function mapWavData(wav)  {
   wav.toBitDepth("16");
 
+  const pcmData = Buffer.from(wav.data.samples);
+  const maxBufferSize = getMaxBufferSize();
+  if (pcmData.length > maxBufferSize) {
+    throw new Error(`PCM buffer size ${pcmData.length} exceeds maximum allowed size of ${maxBufferSize} bytes`);
+  }
+
   return {
-    pcmData: Buffer.from(wav.data.samples),
+    pcmData,
     sampleRate: wav.fmt.sampleRate,
     channels: wav.fmt.numChannels,
   };

@@ -53,6 +53,7 @@ There is a wrapper script called start.sh that you can taylor for your system
 | `AUDIO_PORT` | `9876` | Port the HTTP server listens on |
 | `AUDIO_DEVICE_ID` | the id of the default device | PortAudio output device ID |
 | `AUDIO_SOUNDS_PATH` | `/home/brett/projects/node-audio/sound-icons` | Path to directory containing WAV files |
+| `AUDIO_MAX_BUFFER_SIZE` | `204800` (200KB) | Maximum PCM buffer size in bytes — sound icons exceeding this are skipped at load time |
 
 ## API
 
